@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://ncm_user:ncm_password@postgres:5432/ncm_db
+      - QDRANT_HOST=qdrant
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres
+      - qdrant
+      - redis
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ncm_user
+      POSTGRES_PASSWORD: ncm_password
+      POSTGRES_DB: ncm_db
+    ports:
+      - "5432:5432"
+
+  qdrant:
+    image: qdrant/qdrant:v1.3.0
+    ports:
+      - "6333:6333"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

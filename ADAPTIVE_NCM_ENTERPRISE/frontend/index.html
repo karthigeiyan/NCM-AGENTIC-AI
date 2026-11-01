@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adaptive NCM Enterprise</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; padding: 2rem; }
+      main { max-width: 1000px; margin: auto; }
+      h1 { margin-bottom: .4rem; }
+      .muted { color: #94a3b8; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 2rem 0; }
+      .card { padding: 1.5rem; border: 1px solid #334155; border-radius: 8px; background: #1e293b; }
+      .value { font-size: 1.8rem; font-weight: 700; margin: .5rem 0 0; }
+      button { padding: .8rem 1rem; border: 0; border-radius: 6px; background: #3b82f6; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; }
+      button:disabled { opacity: .6; cursor: wait; }
+      #result { white-space: pre-wrap; overflow-wrap: anywhere; }
+      .error { color: #fca5a5; }
+      @media (max-width: 600px) { body { padding: 1rem; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Uncertainty-Guided Adaptive NCM Enterprise</h1>
+      <p class="muted">Dynamic Neural Cognitive Model &amp; Multi-Agent Orchestration Controller</p>
+      <section class="grid" aria-label="System metrics">
+        <article class="card"><h2>Average uncertainty</h2><p class="value" id="uncertainty">Loading…</p></article>
+        <article class="card"><h2>Active agents</h2><p class="value" id="agents">Loading…</p></article>
+        <article class="card"><h2>System status</h2><p class="value" id="status">Connecting…</p></article>
+      </section>
+      <button id="run" type="button">Run adaptive task</button>
+      <section class="card" aria-live="polite" style="margin-top: 1.5rem">
+        <h2>Latest task</h2>
+        <p id="result" class="muted">No task has been run yet.</p>
+      </section>
+    </main>
+    <script>
+      const apiBase = new URLSearchParams(location.search).get("api") || location.origin;
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+      async function loadMetrics() {
+        try {
+          const [healthResponse, metricsResponse] = await Promise.all([
+            fetch(`${apiBase}/`), fetch(`${apiBase}/api/v1/metrics/system`)
+          ]);
+          if (!healthResponse.ok || !metricsResponse.ok) throw new Error("API returned an error.");
+          const [health, metrics] = await Promise.all([healthResponse.json(), metricsResponse.json()]);
+          document.getElementById("uncertainty").textContent = Number(metrics.avg_uncertainty).toFixed(3);
+          document.getElementById("agents").textContent = `${metrics.active_agents} autonomous agents`;
+          status.textContent = health.status;
+          status.classList.remove("error");
+        } catch (error) {
+          status.textContent = "API unavailable";
+          status.classList.add("error");
+          result.textContent = `Could not connect to ${apiBase}. Start the backend and refresh this page.`;
+        }
+      }
+      document.getElementById("run").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        result.classList.remove("error");
+        result.textContent = "Executing task…";
+        try {
+          const response = await fetch(`${apiBase}/api/v1/tasks/execute`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              task_id: `WEB-${Date.now()}`,
+              description: "Run an adaptive enterprise task from the dashboard",
+              context: { priority: "NORMAL", domain: "GENERAL" }
+            })
+          });
+          if (!response.ok) throw new Error(`Task failed (${response.status}): ${await response.text()}`);
+          result.textContent = JSON.stringify(await response.json(), null, 2);
+        } catch (error) {
+          result.textContent = error.message || String(error);
+          result.classList.add("error");
+        } finally {
+          button.disabled = false;
+        }
+      });
+      loadMetrics();
+    </script>
+  </body>
+</html>
